@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotpot in der Zitadelle</title>
+    <style>
+        body {
+			font-family: Calibri, sans-serif;
+			background-image: url('/img/hotpot_background.png'); 
+			background-size: cover; 
+			background-position: center; 
+			background-repeat: no-repeat; 
+			background-attachment: fixed; 
+			color: white; 
+			font-size: 16px;
+		}
+        table {
+            width: 50%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+      
+        
+        form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 5px;
+            margin: 5px;
+            background-color: #f4f4f4;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        /* Flexbox layout for buttons */
+        .action-buttons {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+        .info-container, .map-container {
+            text-align: center;
+            margin: 20px auto;
+        }
+        iframe {
+            width: 600px;
+            height: 400px;
+            border: 0;
+        }
+		
+		form#ingredientForm {
+			display: flex;
+			flex-direction: column; /* Stack elements vertically */
+			align-items: center; /* Center the elements horizontally */
+			margin-bottom: 20px;
+		}
+
+		form#ingredientForm input,
+		form#ingredientForm button {
+			width: 80%; /* Make inputs and button take up most of the form width */
+			margin-bottom: 10px; /* Add space between fields */
+			padding: 10px; /* Increase padding for better appearance */
+			background-color: #f4f4f4;
+			border: 1px solid #ccc;
+			cursor: pointer;
+		}
+
+        table {
+			width: 100%; /* Full width on mobile */
+			table-layout: fixed; /* Ensure the columns take up equal width */
+		}
+
+		/* Ensuring long text wraps in Name and Ingredients cells */
+		td.name-header, td.ingredient-header {
+			overflow-wrap: break-word; /* Break long text in these columns */
+			word-wrap: break-word;
+			word-break: break-word;
+		}
+
+		/* No wrapping for action buttons */
+		td.actions-header {
+			white-space: nowrap; /* Prevent wrapping for action buttons */
+			text-align: center;
+		}
+
+		th, td {
+			padding: 10px;
+			border: 1px solid #ddd;
+			text-align: left;
+		}
+
+
+		@media (max-width: 600px) {
+			table {
+				width: 100%; 
+			}
+			th.name-header, td.name-header,
+			th.ingredient-header, td.ingredient-header,
+			th.actions-header, td.actions-header {
+				width: auto; 
+			}
+			iframe {
+				width: 100%; /* Full width on mobile */
+				height: 50vw; /* Maintain a good aspect ratio for mobile */
+			}
+		}
+		th.name-header, td.name-header {
+            width: 20%;
+        }
+        th.ingredient-header, td.ingredient-header {
+            width: 50%;
+        }
+        th.actions-header, td.actions-header {
+            width: 30%;
+        }
+        /* Gray header styling */
+        th {
+            background-color: white;
+            border: 1px solid #ccc;
+			color: black; 
+        }
+		
+
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center;">Hotpot in der Zitadelle</h1>
+	
+	
+	<!-- Time and Date Section -->
+    <div class="info-container">
+        <p><strong>Datum:</strong> 16. November 2024</p>
+        <p><strong>Uhrzeit:</strong> 4:00 PM</p>
+    </div>
+
+    <!-- Maps Section -->
+    <div class="map-container">
+        <h2>Ort</h2>
+        <!-- Replace the src attribute with your own Google Maps embed link -->
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2426.668245811082!2d13.212494327030772!3d52.53943633478981!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47a85642fb800763%3A0xbb8af221531db80!2sZitadelle%20Spandau!5e0!3m2!1sde!2sde!4v1728337249857!5m2!1sde!2sde" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+	
+	
+	<h1 style="text-align: center;">Wer bringt Was</h1>
+
+    <!-- Single table for headers and rows -->
+    <table id="ingredientsTable">
+        <thead>
+            <tr>
+                <th class="name-header">Name</th>
+                <th class="ingredient-header">Zutaten</th>
+                <th class="actions-header"></th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Guest entries will be dynamically injected here -->
+        </tbody>
+    </table>
+	
+	<form id="ingredientForm">
+        <input type="hidden" id="docId"> <!-- Hidden input to track Firestore document ID -->
+        <input type="text" id="name" placeholder="Name" required>
+        <input type="text" id="ingredient" placeholder="Zutaten" required>
+        <button type="submit" id="submitBtn">Hinzufügen</button>
+    </form>
+    
+    
+
+    <!-- Firebase SDK (Non-Modular Version via CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <script>
+    // Your web app's Firebase configuration
+    var firebaseConfig = {
+        apiKey: "AIzaSyBgjIWNzvJcfVCbeoGtHu0SqFg8F3nR9b0",
+        authDomain: "hotpot-guest-list.firebaseapp.com",
+        projectId: "hotpot-guest-list",
+        storageBucket: "hotpot-guest-list.appspot.com",
+        messagingSenderId: "1055849043609",
+        appId: "1:1055849043609:web:1784602ef031186fceca08"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+
+    // Handle Form Submission to Add/Update Guests in Firestore
+    const form = document.getElementById('ingredientForm');
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      const name = document.getElementById('name').value;
+      const ingredient = document.getElementById('ingredient').value;
+      const docId = document.getElementById('docId').value;
+
+      if (docId) {
+        db.collection("guests").doc(docId).update({
+          name: name,
+          ingredient: ingredient
+        })
+        .then(() => {
+          document.getElementById('docId').value = ''; 
+          document.getElementById('submitBtn').innerText = 'Add to List';
+          form.reset();
+          fetchGuests();
+        })
+        .catch((error) => {
+          console.error("Error updating document: ", error);
+        });
+      } else {
+        db.collection("guests").add({
+          name: name,
+          ingredient: ingredient
+        })
+        .then(() => {
+          form.reset();
+          fetchGuests();
+        })
+        .catch((error) => {
+          console.error("Error adding document: ", error);
+        });
+      }
+    });
+
+    function fetchGuests() {
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = ''; 
+
+      db.collection("guests").get().then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+          const guestData = doc.data();
+          const newRow = document.createElement('tr');
+          newRow.innerHTML = `
+            <td class="name-header">${guestData.name}</td>
+            <td class="ingredient-header">${guestData.ingredient}</td>
+            <td class="actions-header">
+                <div class="action-buttons">
+                    <button class="edit-btn" onclick="editGuest('${doc.id}', '${guestData.name}', '${guestData.ingredient}')">Edit</button>
+                    <button class="delete-btn" onclick="deleteGuest('${doc.id}')">Delete</button>
+                </div>
+            </td>
+          `;
+          tableBody.appendChild(newRow);
+        });
+      });
+    }
+
+    function editGuest(docId, name, ingredient) {
+      document.getElementById('name').value = name;
+      document.getElementById('ingredient').value = ingredient;
+      document.getElementById('docId').value = docId;
+      document.getElementById('submitBtn').innerText = 'Update Guest';
+    }
+
+    function deleteGuest(docId) {
+      db.collection("guests").doc(docId).delete().then(() => {
+        fetchGuests();
+      }).catch((error) => {
+        console.error("Error deleting document: ", error);
+      });
+    }
+
+    window.onload = fetchGuests;
+    </script>
+
+</body>
+</html>
